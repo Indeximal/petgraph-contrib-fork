@@ -116,6 +116,63 @@ impl PartialEq<Direction> for CompactDirection {
     }
 }
 
+#[cfg(feature = "serde-1")]
+impl<N, E, Ty> serde::Serialize for GraphMap<N, E, Ty>
+where
+    Ty: EdgeType,
+    N: NodeTrait + serde::Serialize,
+    E: serde::Serialize,
+    GraphMap<N, E, Ty>: Clone,
+{
+    /// Serializes the given `GraphMap` into the same format as the standard
+    /// `Graph`. Needs feature `serde-1`.
+    ///
+    /// Note: the graph has to be Clone for this to work.
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let cloned_graph: GraphMap<N, E, Ty> = GraphMap::clone(self);
+        let equivalent_graph: Graph<N, E, Ty, u32> = cloned_graph.into_graph();
+        equivalent_graph.serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde-1")]
+impl<'de, N, E, Ty> serde::Deserialize<'de> for GraphMap<N, E, Ty>
+where
+    Ty: EdgeType,
+    N: NodeTrait + serde::Deserialize<'de>,
+    E: Clone + serde::Deserialize<'de>,
+{
+    /// Deserializes into a new `GraphMap` from the same format as the standard
+    /// `Graph`. Needs feature `serde-1`.
+    ///
+    /// Note: the edges have to be Clone for this to work.
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let equivalent_graph: Graph<N, E, Ty, u32> = Graph::deserialize(deserializer)?;
+        let mut graph: GraphMap<N, E, Ty> =
+            GraphMap::with_capacity(equivalent_graph.node_count(), equivalent_graph.edge_count());
+
+        for node in equivalent_graph.raw_nodes() {
+            graph.add_node(node.weight);
+        }
+
+        for edge in equivalent_graph.edge_indices() {
+            let (a, b) = equivalent_graph.edge_endpoints(edge).unwrap();
+            graph.add_edge(
+                *equivalent_graph.node_weight(a).unwrap(),
+                *equivalent_graph.node_weight(b).unwrap(),
+                equivalent_graph.edge_weight(edge).unwrap().clone(),
+            );
+        }
+        Ok(graph)
+    }
+}
+
 impl<N, E, Ty> GraphMap<N, E, Ty>
 where
     N: NodeTrait,

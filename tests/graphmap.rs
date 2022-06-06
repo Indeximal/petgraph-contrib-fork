@@ -119,7 +119,7 @@ fn remove_node() {
     graph.remove_node(2);
 
     let neighbors: Vec<u32> = graph.neighbors(1).collect();
-    assert_eq!(neighbors, []);
+    assert_eq!(neighbors, [] as [u32; 0]);
 
     let edges: Vec<(u32, u32, _)> = graph.all_edges().collect();
     assert_eq!(edges, []);
@@ -377,4 +377,64 @@ fn self_loops_can_be_removed() {
 
     assert_eq!(graph.neighbors_directed((), Outgoing).next(), None);
     assert_eq!(graph.neighbors_directed((), Incoming).next(), None);
+}
+
+#[cfg(feature = "serde-1")]
+#[test]
+fn serialize_deserialize() {
+    use serde_derive::{Deserialize, Serialize};
+
+    // first graph
+    let mut gr: GraphMap<i32, u32, Directed> = GraphMap::from_edges(&[
+        (6, 0, 0),
+        (0, 3, 1),
+        (3, 6, 2),
+        (8, 6, 3),
+        (8, 2, 4),
+        (2, 5, 5),
+        (5, 8, 6),
+        (7, 5, 7),
+        (1, 7, 8),
+        (7, 4, 9),
+        (4, 1, 10),
+    ]);
+    gr.add_node(42);
+
+    let ser_str = serde_json::to_string(&gr).unwrap();
+    println!("{}", ser_str);
+
+    let gr_deser: GraphMap<i32, u32, Directed> = serde_json::from_str(&ser_str.as_str()).unwrap();
+    assert!(petgraph::algo::is_isomorphic(&gr, &gr_deser));
+
+    // second graph
+    #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+    struct TestingNode {
+        pub a: u32,
+        pub b: i32,
+    }
+    let mut gr: GraphMap<TestingNode, (u8, u8), Undirected> = GraphMap::from_edges(&[
+        (
+            TestingNode { a: 42, b: -1 },
+            TestingNode { a: 12, b: -2 },
+            (1, 2),
+        ),
+        (
+            TestingNode { a: 12, b: -2 },
+            TestingNode { a: 13, b: -3 },
+            (99, 99),
+        ),
+        (
+            TestingNode { a: 13, b: -3 },
+            TestingNode { a: 42, b: -1 },
+            (99, 99),
+        ),
+    ]);
+    gr.add_node(TestingNode { a: 0, b: 0 });
+
+    let ser_str = serde_json::to_string(&gr).unwrap();
+    println!("{}", ser_str);
+
+    let gr_deser: GraphMap<TestingNode, (u8, u8), Undirected> =
+        serde_json::from_str(&ser_str.as_str()).unwrap();
+    assert!(petgraph::algo::is_isomorphic(&gr, &gr_deser));
 }
