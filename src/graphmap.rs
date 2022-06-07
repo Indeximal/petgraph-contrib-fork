@@ -154,22 +154,7 @@ where
         D: serde::Deserializer<'de>,
     {
         let equivalent_graph: Graph<N, E, Ty, u32> = Graph::deserialize(deserializer)?;
-        let mut graph: GraphMap<N, E, Ty> =
-            GraphMap::with_capacity(equivalent_graph.node_count(), equivalent_graph.edge_count());
-
-        for node in equivalent_graph.raw_nodes() {
-            graph.add_node(node.weight);
-        }
-
-        for edge in equivalent_graph.edge_indices() {
-            let (a, b) = equivalent_graph.edge_endpoints(edge).unwrap();
-            graph.add_edge(
-                *equivalent_graph.node_weight(a).unwrap(),
-                *equivalent_graph.node_weight(b).unwrap(),
-                equivalent_graph.edge_weight(edge).unwrap().clone(),
-            );
-        }
-        Ok(graph)
+        Ok(GraphMap::from_graph(equivalent_graph))
     }
 }
 
@@ -533,6 +518,37 @@ where
             gr.add_edge(node_index(ai), node_index(bi), edge_weight);
         }
         gr
+    }
+
+    /// Creates a `GraphMap` that corresponds to the given `Graph`.
+    ///
+    /// Note that node and edge indices in the `Graph` are lost in this process,
+    /// but the weights are kept.
+    /// **Warning**: Parallel edges are lost, only the last one remains.
+    ///
+    /// Computes in **O(|V| + |E|)** time (average).
+    pub fn from_graph<Ix>(graph: Graph<N, E, Ty, Ix>) -> Self
+    where
+        Ix: crate::graph::IndexType,
+        E: Clone,
+    {
+        let mut new_graph: GraphMap<N, E, Ty> =
+            GraphMap::with_capacity(graph.node_count(), graph.edge_count());
+
+        for node in graph.raw_nodes() {
+            new_graph.add_node(node.weight);
+        }
+
+        for edge in graph.edge_indices() {
+            let (a, b) = graph.edge_endpoints(edge).unwrap();
+            new_graph.add_edge(
+                *graph.node_weight(a).unwrap(),
+                *graph.node_weight(b).unwrap(),
+                graph.edge_weight(edge).unwrap().clone(),
+            );
+        }
+
+        new_graph
     }
 }
 
