@@ -522,9 +522,8 @@ where
 
     /// Creates a `GraphMap` that corresponds to the given `Graph`.
     ///
-    /// Note that node and edge indices in the `Graph` are lost in this process,
-    /// but the weights are kept.
-    /// **Warning**: Parallel edges are lost, only the last one remains.
+    /// **Warning**: Nodes with the same weight are merged and only the last parallel edge
+    /// is kept, because node and edge indices in the `Graph` are lost in this process.
     ///
     /// Computes in **O(|V| + |E|)** time (average).
     pub fn from_graph<Ix>(graph: Graph<N, E, Ty, Ix>) -> Self

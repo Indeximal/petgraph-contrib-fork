@@ -526,6 +526,7 @@ fn json_graphmap_integer() {
 
     let gr_deser: GraphMap<i32, u32, Directed> = rejson!(&gr);
     assert!(petgraph::algo::is_isomorphic(&gr, &gr_deser));
+    assert_eq!(gr_deser[(4, 1)], 10);
 }
 
 #[test]
@@ -537,25 +538,29 @@ fn json_graphmap_struct() {
         pub a: u32,
         pub b: i32,
     }
-    let mut gr: GraphMap<TestingNode, (u8, u8), Undirected> = GraphMap::from_edges(&[
+    let mut gr: GraphMap<TestingNode, (u8, f32), Undirected> = GraphMap::from_edges(&[
         (
             TestingNode { a: 42, b: -1 },
             TestingNode { a: 12, b: -2 },
-            (1, 2),
+            (1, 2.),
         ),
         (
             TestingNode { a: 12, b: -2 },
             TestingNode { a: 13, b: -3 },
-            (99, 99),
+            (99, 99.),
         ),
         (
             TestingNode { a: 13, b: -3 },
             TestingNode { a: 42, b: -1 },
-            (99, 99),
+            (99, 98.),
         ),
     ]);
     gr.add_node(TestingNode { a: 0, b: 0 });
 
-    let gr_deser: GraphMap<TestingNode, (u8, u8), Undirected> = rejson!(&gr);
+    let gr_deser: GraphMap<TestingNode, (u8, f32), Undirected> = rejson!(&gr);
     assert!(petgraph::algo::is_isomorphic(&gr, &gr_deser));
+    assert_eq!(
+        gr_deser[(TestingNode { a: 42, b: -1 }, TestingNode { a: 12, b: -2 })],
+        (1, 2.)
+    );
 }
